@@ -2,9 +2,8 @@ package com.example.calistenic.ui
 
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.FitnessCenter
 import androidx.compose.material.icons.filled.History
-import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
@@ -18,31 +17,34 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
+import androidx.navigation.NavType
+import androidx.navigation.navArgument
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import com.example.calistenic.ui.screens.AddWorkoutScreen
-import com.example.calistenic.ui.screens.SettingsScreen
+import com.example.calistenic.ui.screens.LevelEditorScreen
+import com.example.calistenic.ui.screens.LevelSessionScreen
+import com.example.calistenic.ui.screens.SeviyelerScreen
 import com.example.calistenic.ui.screens.WorkoutHistoryScreen
 
 import androidx.compose.ui.res.stringResource
 import com.example.calistenic.R
 
 private sealed class Screen(val route: String, val labelRes: Int, val icon: ImageVector) {
-    object Add : Screen("add", R.string.tab_add, Icons.Filled.Add)
+    object Seviyeler : Screen("seviyeler", R.string.tab_seviyeler, Icons.Filled.FitnessCenter)
     object History : Screen("history", R.string.tab_history, Icons.Filled.History)
-    object Settings : Screen("settings", R.string.tab_settings, Icons.Filled.Settings)
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CalistenicApp(
     workoutViewModel: WorkoutViewModel,
-    timerViewModel: TimerViewModel
+    timerViewModel: TimerViewModel,
+    levelsViewModel: LevelsViewModel
 ) {
     val navController = rememberNavController()
-    val screens = listOf(Screen.Add, Screen.History, Screen.Settings)
+    val screens = listOf(Screen.Seviyeler, Screen.History)
 
     Scaffold(
         topBar = {
@@ -73,23 +75,57 @@ fun CalistenicApp(
     ) { innerPadding ->
         NavHost(
             navController = navController,
-            startDestination = Screen.Add.route,
+            startDestination = Screen.Seviyeler.route,
             modifier = Modifier.padding(innerPadding)
         ) {
-            composable(Screen.Add.route) {
-                AddWorkoutScreen(
-                    workoutViewModel = workoutViewModel,
-                    timerViewModel = timerViewModel
+            composable(Screen.Seviyeler.route) {
+                SeviyelerScreen(
+                    levelsViewModel = levelsViewModel,
+                    onNavigateToEditor = {
+                        navController.navigate("seviyeler/editor")
+                    },
+                    onNavigateToEditorWithId = { levelId ->
+                        navController.navigate("seviyeler/editor/$levelId")
+                    },
+                    onNavigateToSession = {
+                        navController.navigate("seviyeler/session")
+                    }
+                )
+            }
+            composable("seviyeler/editor") {
+                LevelEditorScreen(
+                    levelsViewModel = levelsViewModel,
+                    levelId = null,
+                    onDone = { navController.popBackStack() }
+                )
+            }
+            composable(
+                route = "seviyeler/editor/{levelId}",
+                arguments = listOf(navArgument("levelId") { type = NavType.IntType })
+            ) { backStackEntry ->
+                val levelId = backStackEntry.arguments?.getInt("levelId") ?: return@composable
+                LevelEditorScreen(
+                    levelsViewModel = levelsViewModel,
+                    levelId = levelId,
+                    onDone = { navController.popBackStack() }
+                )
+            }
+            composable("seviyeler/session") {
+                LevelSessionScreen(
+                    levelsViewModel = levelsViewModel,
+                    timerViewModel = timerViewModel,
+                    onDone = { navController.popBackStack() },
+                    onNavigateToHistory = {
+                        navController.navigate(Screen.History.route) {
+                            popUpTo(Screen.Seviyeler.route) { inclusive = false }
+                        }
+                    }
                 )
             }
             composable(Screen.History.route) {
                 WorkoutHistoryScreen(
-                    workoutViewModel = workoutViewModel
-                )
-            }
-            composable(Screen.Settings.route) {
-                SettingsScreen(
-                    workoutViewModel = workoutViewModel
+                    workoutViewModel = workoutViewModel,
+                    levelsViewModel = levelsViewModel
                 )
             }
         }

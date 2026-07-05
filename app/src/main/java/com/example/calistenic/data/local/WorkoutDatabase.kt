@@ -9,13 +9,23 @@ import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 
 @Database(
-    entities = [WorkoutEntity::class],
-    version = 2,
+    entities = [
+        WorkoutEntity::class,
+        LevelEntity::class,
+        LevelExerciseEntity::class,
+        LevelSessionEntity::class,
+        LevelSessionExerciseEntity::class
+    ],
+    version = 3,
     exportSchema = true
 )
 @TypeConverters(Converters::class)
 abstract class WorkoutDatabase : RoomDatabase() {
     abstract fun workoutDao(): WorkoutDao
+    abstract fun levelDao(): LevelDao
+    abstract fun levelExerciseDao(): LevelExerciseDao
+    abstract fun levelSessionDao(): LevelSessionDao
+    abstract fun levelSessionExerciseDao(): LevelSessionExerciseDao
 
     companion object {
         @Volatile

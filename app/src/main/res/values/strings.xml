@@ -1,28 +1,45 @@
 <resources>
     <string name="app_name">Calistenic</string>
-    <string name="tab_add">Ekle</string>
     <string name="tab_history">Geçmiş</string>
-    <string name="tab_settings">Ayarlar</string>
-    <string name="new_workout">Yeni Antrenman</string>
     <string name="exercise_name_label">Hareket adı</string>
-    <string name="exercise_name_placeholder">Örnek: Pull-up</string>
-    <string name="active_set_format">Aktif Set: %1$d/%2$d</string>
-    <string name="all_sets_completed">Tüm setler tamamlandı</string>
-    <string name="total_reps">Toplam Tekrar</string>
-    <string name="set_completed_format">Set %1$d Tamamlandı</string>
-    <string name="all_sets_completed_label">Tüm Setler Tamamlandı</string>
-    <string name="reset_set_tracking">Set Takibini Sıfırla</string>
-    <string name="close">Kapat</string>
-    <string name="save_workout">Antrenmanı Kaydet</string>
-    <string name="error_exercise_name_empty">Hareket adı boş bırakılamaz</string>
-    <string name="error_set_reps_empty">Tüm set tekrarlarını girin</string>
-    <string name="error_rest_invalid">Dinlenme süreleri 0\'dan büyük olmalı</string>
-    <string name="workout_saved_success">Antrenman seçilen güne kaydedildi</string>
-    <string name="add_set">Set Ekle</string>
-    <string name="remove_set">Set Çıkar</string>
-    <string name="reps_label">Yapılan tekrar</string>
-    <string name="manual_entry">Elle gir</string>
-    <string name="use_stepper">Stepper</string>
-    <string name="decrease_reps">Tekrar azalt</string>
-    <string name="increase_reps">Tekrar artır</string>
+
+    <!-- Seviyeler tab -->
+    <string name="tab_seviyeler">Seviyeler</string>
+    <string name="seviyeler_empty">Henüz seviye oluşturmadın</string>
+    <string name="new_level">Yeni Seviye</string>
+    <string name="start_session">Başlat</string>
+    <string name="continue_session">Devam Et</string>
+    <string name="active_session_banner">Devam eden session: %1$s</string>
+    <string name="level_exercises_count">%1$d hareket</string>
+    <string name="level_total_sets">%1$d set</string>
+    <string name="delete_level">Seviyeyi Sil</string>
+    <string name="edit_level">Seviyeyi Düzenle</string>
+
+    <!-- Level editor -->
+    <string name="level_name_label">Seviye adı</string>
+    <string name="level_name_placeholder">Örnek: Seviye 4</string>
+    <string name="add_exercise">Hareket Ekle</string>
+    <string name="exercise_set_count">Set sayısı</string>
+    <string name="rest_between_sets_short">Set arası (sn)</string>
+    <string name="rest_after_exercise">Hareket sonrası dinlenme (sn)</string>
+    <string name="preset_rest_short">Kısa · 25sn</string>
+    <string name="preset_rest_long">Uzun · 3dk</string>
+    <string name="preset_rest_none">Son · 0sn</string>
+    <string name="save_level">Seviyeyi Kaydet</string>
+    <string name="error_level_name_empty">Seviye adı boş bırakılamaz</string>
+    <string name="error_no_exercises">En az bir hareket eklemelisin</string>
+    <string name="error_level_exercise_name_empty">Tüm hareketlerin adını gir</string>
+    <string name="remove_exercise">Hareketi Sil</string>
+    <string name="move_up">Yukarı</string>
+    <string name="move_down">Aşağı</string>
+
+    <!-- Level session -->
+    <string name="session_set_completed">Set Tamamlandı</string>
+    <string name="session_rest_label">Dinlenme</string>
+    <string name="session_complete">Seviye tamamlandı!</string>
+    <string name="session_cancel">İptal</string>
+    <string name="session_cancel_confirm">Session\'ı iptal et? İlerleme silinecek.</string>
+    <string name="session_next_exercise">Sıradaki hareket</string>
+    <string name="session_rest_finished">Dinlenme bitti, devam</string>
+    <string name="session_no_active">Aktif session yok</string>
 </resources>

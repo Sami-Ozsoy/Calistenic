@@ -16,6 +16,7 @@ import androidx.core.content.ContextCompat
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.calistenic.ui.CalistenicApp
+import com.example.calistenic.ui.LevelsViewModel
 import com.example.calistenic.ui.SplashScreen
 import com.example.calistenic.ui.TimerViewModel
 import com.example.calistenic.ui.WorkoutViewModel
@@ -49,10 +50,17 @@ class MainActivity : ComponentActivity() {
                         )
                     )
                     val timerViewModel: TimerViewModel = viewModel()
+                    val levelsViewModel: LevelsViewModel = viewModel(
+                        factory = LevelsViewModel.Factory(
+                            levelsRepository = application.levelsRepository,
+                            levelSessionRepository = application.levelSessionRepository
+                        )
+                    )
 
                     CalistenicApp(
                         workoutViewModel = workoutViewModel,
-                        timerViewModel = timerViewModel
+                        timerViewModel = timerViewModel,
+                        levelsViewModel = levelsViewModel
                     )
                 }
             }
