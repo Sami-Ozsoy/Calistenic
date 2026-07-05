@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -37,15 +38,19 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import coil.compose.AsyncImage
 import com.example.calistenic.R
 import com.example.calistenic.TimerUiState
 import com.example.calistenic.data.local.LevelSessionExerciseEntity
 import com.example.calistenic.ui.LevelsViewModel
 import com.example.calistenic.ui.TimerViewModel
+import java.io.File
 import kotlin.math.ceil
 
 @Composable
@@ -155,6 +160,7 @@ fun LevelSessionScreen(
             if (currentExercise != null) {
                 CurrentSetCard(
                     exerciseName = currentExercise.exerciseName,
+                    imagePath = currentExercise.imagePath,
                     setIndex = currentSetIndex + 1,
                     setTotal = currentExercise.setCount,
                     stepperValue = stepperValue,
@@ -243,6 +249,7 @@ private fun BreadcrumbRow(
 @Composable
 private fun CurrentSetCard(
     exerciseName: String,
+    imagePath: String?,
     setIndex: Int,
     setTotal: Int,
     stepperValue: Int,
@@ -264,6 +271,18 @@ private fun CurrentSetCard(
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.Bold
             )
+            // Hareket görseli — kullanıcı hangi hareketi yapacağını görsel olarak anlar
+            if (imagePath != null) {
+                AsyncImage(
+                    model = File(imagePath),
+                    contentDescription = exerciseName,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(max = 220.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                )
+            }
             Text(
                 text = "Set $setIndex/$setTotal",
                 style = MaterialTheme.typography.bodyLarge,

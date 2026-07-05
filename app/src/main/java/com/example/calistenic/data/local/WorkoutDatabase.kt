@@ -16,7 +16,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         LevelSessionEntity::class,
         LevelSessionExerciseEntity::class
     ],
-    version = 3,
+    version = 4,
     exportSchema = true
 )
 @TypeConverters(Converters::class)

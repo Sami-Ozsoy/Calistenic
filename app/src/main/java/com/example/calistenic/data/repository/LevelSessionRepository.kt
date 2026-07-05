@@ -35,7 +35,8 @@ class LevelSessionRepository(
                     setCount = ex.setCount,
                     sets = emptyList(),
                     restBetweenSetsSeconds = ex.restBetweenSetsSeconds,
-                    restAfterSeconds = ex.restAfterSeconds
+                    restAfterSeconds = ex.restAfterSeconds,
+                    imagePath = ex.imagePath
                 )
             )
         }

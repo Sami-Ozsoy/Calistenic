@@ -27,5 +27,7 @@ data class LevelExerciseEntity(
     // 25 = kısa (grup içi sonraki harekete geçiş),
     // 180 = uzun (grup sonu),
     // 0 = son hareket (session biter)
-    val restAfterSeconds: Int
+    val restAfterSeconds: Int,
+    // Egzersiz görseli — app-internal storage'da absolute path (File). Null = görsel yok.
+    val imagePath: String? = null
 )

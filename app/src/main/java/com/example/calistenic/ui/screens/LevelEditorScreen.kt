@@ -1,10 +1,17 @@
 package com.example.calistenic.ui.screens
 
+import android.Manifest
+import android.content.pm.PackageManager
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.PaddingValues
@@ -40,22 +47,31 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
+import androidx.core.content.FileProvider
+import coil.compose.AsyncImage
 import com.example.calistenic.R
 import com.example.calistenic.data.local.LevelExerciseEntity
 import com.example.calistenic.ui.LevelsViewModel
 import com.example.calistenic.ui.components.NumberField
 import kotlinx.coroutines.launch
+import java.io.File
+import java.util.UUID
 
 private data class ExerciseDraft(
     val id: Int = 0,
     val exerciseName: String = "",
     val setCount: Int = 6,
     val restBetweenSetsSeconds: Int = 25,
-    val restAfterSeconds: Int = 25
+    val restAfterSeconds: Int = 25,
+    val imagePath: String? = null
 )
 
 @Composable
@@ -85,7 +101,8 @@ fun LevelEditorScreen(
                         exerciseName = it.exerciseName,
                         setCount = it.setCount,
                         restBetweenSetsSeconds = it.restBetweenSetsSeconds,
-                        restAfterSeconds = it.restAfterSeconds
+                        restAfterSeconds = it.restAfterSeconds,
+                        imagePath = it.imagePath
                     )
                 })
             }
@@ -113,7 +130,8 @@ fun LevelEditorScreen(
                         exerciseName = it.exerciseName.trim(),
                         setCount = it.setCount,
                         restBetweenSetsSeconds = it.restBetweenSetsSeconds,
-                        restAfterSeconds = it.restAfterSeconds
+                        restAfterSeconds = it.restAfterSeconds,
+                        imagePath = it.imagePath
                     )
                 }
                 levelsViewModel.saveLevel(levelId, levelName.trim(), entities) { onDone() }
@@ -159,6 +177,7 @@ fun LevelEditorScreen(
                         onSetCountChange = { exercises[index] = draft.copy(setCount = it) },
                         onRestBetweenSetsChange = { exercises[index] = draft.copy(restBetweenSetsSeconds = it) },
                         onRestAfterChange = { exercises[index] = draft.copy(restAfterSeconds = it) },
+                        onImagePathChange = { exercises[index] = draft.copy(imagePath = it) },
                         onDelete = { exercises.removeAt(index) },
                         onMoveUp = {
                             if (index > 0) {
@@ -209,6 +228,7 @@ private fun ExerciseEditorCard(
     onSetCountChange: (Int) -> Unit,
     onRestBetweenSetsChange: (Int) -> Unit,
     onRestAfterChange: (Int) -> Unit,
+    onImagePathChange: (String?) -> Unit,
     onDelete: () -> Unit,
     onMoveUp: () -> Unit,
     onMoveDown: () -> Unit
@@ -259,6 +279,12 @@ private fun ExerciseEditorCard(
                 singleLine = true,
                 shape = RoundedCornerShape(12.dp),
                 modifier = Modifier.fillMaxWidth()
+            )
+
+            // Egzersiz görseli — galeri veya kamera ile ekle
+            ExerciseImagePicker(
+                imagePath = draft.imagePath,
+                onImagePathChange = onImagePathChange
             )
 
             // Set sayısı stepper
@@ -357,4 +383,129 @@ private fun StepperButtons(
             Text("+", style = MaterialTheme.typography.titleMedium)
         }
     }
+}
+
+@Composable
+private fun ExerciseImagePicker(
+    imagePath: String?,
+    onImagePathChange: (String?) -> Unit
+) {
+    val context = LocalContext.current
+    // Kameradan çekilen geçici dosya URI'si — launcher tetiklenmeden önce set edilir.
+    var pendingCameraUri by remember { mutableStateOf<Uri?>(null) }
+
+    // Galeri picker launcher'ı
+    val galleryLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.PickVisualMedia()
+    ) { uri ->
+        if (uri != null) {
+            val destFile = File(context.filesDir, "exercise_images/${UUID.randomUUID()}.jpg")
+            destFile.parentFile?.mkdirs()
+            context.contentResolver.openInputStream(uri)?.use { input ->
+                destFile.outputStream().use { output -> input.copyTo(output) }
+            }
+            onImagePathChange(destFile.absolutePath)
+        }
+    }
+
+    // Kamera launcher'ı — success = true ise pendingCameraUri'deki dosya yazılmış demektir
+    val cameraLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.TakePicture()
+    ) { success ->
+        val uri = pendingCameraUri
+        if (success && uri != null) {
+            val srcFile = File(uri.path ?: return@rememberLauncherForActivityResult)
+            val destFile = File(context.filesDir, "exercise_images/${UUID.randomUUID()}.jpg")
+            destFile.parentFile?.mkdirs()
+            srcFile.renameTo(destFile)
+            onImagePathChange(destFile.absolutePath)
+        } else {
+            // İptal edildiyse temp dosyayı sil
+            pendingCameraUri?.path?.let { File(it).delete() }
+        }
+        pendingCameraUri = null
+    }
+
+    // Kamera izni iste — kullanıcı kamera butonuna basınca kontrol edilir, gerekirse iste
+    val permissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        if (granted) {
+            launchCamera(context, pendingCameraUri, onUriSet = { pendingCameraUri = it }, cameraLauncher)
+        }
+    }
+
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        // Preview — imagePath varsa göster
+        if (imagePath != null) {
+            AsyncImage(
+                model = File(imagePath),
+                contentDescription = "Egzersiz görseli",
+                contentScale = ContentScale.Crop,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(160.dp)
+                    .clip(RoundedCornerShape(12.dp))
+            )
+        }
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            OutlinedButton(
+                onClick = {
+                    galleryLauncher.launch(
+                        PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                    )
+                },
+                modifier = Modifier.weight(1f),
+                contentPadding = PaddingValues(horizontal = 6.dp, vertical = 6.dp)
+            ) {
+                Text("Galeri", style = MaterialTheme.typography.labelSmall)
+            }
+            OutlinedButton(
+                onClick = {
+                    val granted = ContextCompat.checkSelfPermission(
+                        context, Manifest.permission.CAMERA
+                    ) == PackageManager.PERMISSION_GRANTED
+                    if (granted) {
+                        launchCamera(context, pendingCameraUri, onUriSet = { pendingCameraUri = it }, cameraLauncher)
+                    } else {
+                        permissionLauncher.launch(Manifest.permission.CAMERA)
+                    }
+                },
+                modifier = Modifier.weight(1f),
+                contentPadding = PaddingValues(horizontal = 6.dp, vertical = 6.dp)
+            ) {
+                Text("Kamera", style = MaterialTheme.typography.labelSmall)
+            }
+            if (imagePath != null) {
+                OutlinedButton(
+                    onClick = { onImagePathChange(null) },
+                    modifier = Modifier.weight(1f),
+                    contentPadding = PaddingValues(horizontal = 6.dp, vertical = 6.dp)
+                ) {
+                    Text("Kaldır", style = MaterialTheme.typography.labelSmall)
+                }
+            }
+        }
+    }
+}
+
+private fun launchCamera(
+    context: android.content.Context,
+    currentPendingUri: Uri?,
+    onUriSet: (Uri) -> Unit,
+    cameraLauncher: androidx.activity.result.ActivityResultLauncher<Uri>
+) {
+    val tmpFile = File(context.filesDir, "camera_tmp/${UUID.randomUUID()}.jpg")
+    tmpFile.parentFile?.mkdirs()
+    val uri = FileProvider.getUriForFile(
+        context,
+        "${context.packageName}.fileprovider",
+        tmpFile
+    )
+    onUriSet(uri)
+    cameraLauncher.launch(uri)
 }

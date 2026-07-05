@@ -24,5 +24,7 @@ data class LevelSessionExerciseEntity(
     val setCount: Int,           // level_exercises'ten snapshot
     val sets: List<Int>,         // Converters (CSV) — başta boş, set bittikçe append
     val restBetweenSetsSeconds: Int,
-    val restAfterSeconds: Int
+    val restAfterSeconds: Int,
+    // level_exercises'ten snapshot — app-internal storage absolute path. Null = görsel yok.
+    val imagePath: String? = null
 )
