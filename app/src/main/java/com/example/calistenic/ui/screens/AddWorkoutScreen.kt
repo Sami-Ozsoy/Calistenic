@@ -1,19 +1,29 @@
 package com.example.calistenic.ui.screens
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -34,16 +44,17 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import com.example.calistenic.R
 import com.example.calistenic.ui.TimerViewModel
 import com.example.calistenic.ui.WorkoutViewModel
 import com.example.calistenic.ui.components.NumberField
 import com.example.calistenic.ui.components.SectionHeader
 import com.example.calistenic.ui.components.TimerSection
-import com.example.calistenic.ui.components.WorkoutDateSelector
 import kotlinx.coroutines.launch
-import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.ZoneId
@@ -57,9 +68,7 @@ fun AddWorkoutScreen(
     modifier: Modifier = Modifier
 ) {
     val settings by workoutViewModel.settings.collectAsState()
-    val workouts by workoutViewModel.workouts.collectAsState()
     var exerciseName by remember { mutableStateOf("") }
-    var selectedDate by remember { mutableStateOf(LocalDate.now()) }
 
     val setValues = remember(settings.defaultReps) {
         mutableStateListOf<String>().apply {
@@ -67,25 +76,16 @@ fun AddWorkoutScreen(
         }
     }
 
-    var restBetweenSets by remember(settings.restBetweenSetsSeconds) {
-        mutableStateOf(settings.restBetweenSetsSeconds.toString())
-    }
-    var restBetweenExercises by remember(settings.restBetweenExercisesSeconds) {
-        mutableStateOf(settings.restBetweenExercisesSeconds.toString())
-    }
     var completedSets by remember { mutableIntStateOf(0) }
     var suggestedRestSeconds by remember { mutableIntStateOf(0) }
     var showRestSuggestion by remember { mutableStateOf(false) }
+    var showTimerDialog by remember { mutableStateOf(false) }
 
+    val timerState by timerViewModel.uiState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     val totalReps = setValues.sumOf { it.toIntOrNull() ?: 0 }
     val activeSet = (completedSets + 1).coerceAtMost(setValues.size)
-    val selectedDateWorkoutCount = workouts.count {
-        Instant.ofEpochMilli(it.createdAt)
-            .atZone(ZoneId.systemDefault())
-            .toLocalDate() == selectedDate
-    }
 
     if (showRestSuggestion) {
         val isExerciseRest = completedSets == setValues.size
@@ -108,6 +108,7 @@ fun AddWorkoutScreen(
                     onClick = {
                         timerViewModel.start(suggestedRestSeconds)
                         showRestSuggestion = false
+                        showTimerDialog = true
                     }
                 ) {
                     Text("Başlat")
@@ -119,6 +120,32 @@ fun AddWorkoutScreen(
                 }
             }
         )
+    }
+
+    if (showTimerDialog) {
+        Dialog(
+            onDismissRequest = { showTimerDialog = false },
+            properties = DialogProperties(usePlatformDefaultWidth = false)
+        ) {
+            androidx.compose.foundation.layout.Box(
+                modifier = Modifier.padding(24.dp)
+            ) {
+                TimerSection(
+                    timerViewModel = timerViewModel,
+                    defaultDurationSeconds = settings.restBetweenSetsSeconds.coerceAtLeast(1),
+                    modifier = Modifier.padding(top = 20.dp)
+                )
+                androidx.compose.material3.IconButton(
+                    onClick = { showTimerDialog = false },
+                    modifier = Modifier.align(androidx.compose.ui.Alignment.TopEnd)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Close,
+                        contentDescription = stringResource(R.string.close)
+                    )
+                }
+            }
+        }
     }
 
     Scaffold(
@@ -137,14 +164,6 @@ fun AddWorkoutScreen(
                 SectionHeader(
                     title = stringResource(R.string.new_workout),
                     subtitle = "Tarih, hareket ve setlerini gir, sonra kaydet."
-                )
-            }
-
-            item {
-                WorkoutDateSelector(
-                    selectedDate = selectedDate,
-                    workoutCount = selectedDateWorkoutCount,
-                    onDateSelected = { selectedDate = it }
                 )
             }
 
@@ -168,14 +187,33 @@ fun AddWorkoutScreen(
                 )
             }
 
-            itemsIndexed(setValues) { index, value ->
-                SetCard(
-                    setNumber = index + 1,
-                    value = value,
-                    isCompleted = index < completedSets,
-                    isActive = index == completedSets,
-                    onValueChange = { setValues[index] = it }
-                )
+            val setRows = setValues.chunked(2)
+            itemsIndexed(setRows) { rowIndex, row ->
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    SetCard(
+                        setNumber = rowIndex * 2 + 1,
+                        value = row[0],
+                        isCompleted = rowIndex * 2 < completedSets,
+                        isActive = rowIndex * 2 == completedSets,
+                        onValueChange = { setValues[rowIndex * 2] = it },
+                        modifier = Modifier.weight(1f)
+                    )
+                    if (row.size > 1) {
+                        SetCard(
+                            setNumber = rowIndex * 2 + 2,
+                            value = row[1],
+                            isCompleted = rowIndex * 2 + 1 < completedSets,
+                            isActive = rowIndex * 2 + 1 == completedSets,
+                            onValueChange = { setValues[rowIndex * 2 + 1] = it },
+                            modifier = Modifier.weight(1f)
+                        )
+                    } else {
+                        Spacer(modifier = Modifier.weight(1f))
+                    }
+                }
             }
 
             item {
@@ -206,78 +244,70 @@ fun AddWorkoutScreen(
             }
 
             item {
-                TotalRepsCard(totalReps = totalReps)
-            }
-
-            item {
-                SectionHeader(title = "Dinlenme Süreleri")
-            }
-
-            item {
-                NumberField(
-                    value = restBetweenSets,
-                    onValueChange = { restBetweenSets = it },
-                    label = stringResource(R.string.rest_between_sets_label),
-                    modifier = Modifier.fillMaxWidth()
-                )
-            }
-
-            item {
-                NumberField(
-                    value = restBetweenExercises,
-                    onValueChange = { restBetweenExercises = it },
-                    label = stringResource(R.string.rest_between_exercises_label),
-                    modifier = Modifier.fillMaxWidth()
-                )
-            }
-
-            item {
-                Button(
-                    onClick = {
-                        if (completedSets < setValues.size) {
-                            completedSets++
-                            suggestedRestSeconds = if (completedSets == setValues.size) {
-                                restBetweenExercises.toIntOrNull()?.coerceAtLeast(1) ?: 120
-                            } else {
-                                restBetweenSets.toIntOrNull()?.coerceAtLeast(1) ?: 25
-                            }
-                            showRestSuggestion = true
-                        }
-                    },
-                    enabled = completedSets < setValues.size,
-                    shape = RoundedCornerShape(14.dp),
-                    modifier = Modifier.fillMaxWidth()
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
                 ) {
                     Text(
-                        if (completedSets < setValues.size) {
-                            stringResource(R.string.set_completed_format, completedSets + 1)
-                        } else {
-                            stringResource(R.string.all_sets_completed_label)
-                        }
+                        text = stringResource(R.string.total_reps),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        text = totalReps.toString(),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary
                     )
                 }
             }
 
-            if (completedSets > 0) {
-                item {
-                    OutlinedButton(
-                        onClick = { completedSets = 0 },
+            item {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
+                ) {
+                    Button(
+                        onClick = {
+                            if (completedSets < setValues.size) {
+                                completedSets++
+                                suggestedRestSeconds = if (completedSets == setValues.size) {
+                                    settings.restBetweenExercisesSeconds.coerceAtLeast(1)
+                                } else {
+                                    settings.restBetweenSetsSeconds.coerceAtLeast(1)
+                                }
+                                showRestSuggestion = true
+                            }
+                        },
+                        enabled = completedSets < setValues.size,
                         shape = RoundedCornerShape(14.dp),
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.weight(1f)
                     ) {
-                        Text(stringResource(R.string.reset_set_tracking))
+                        Text(
+                            if (completedSets < setValues.size) {
+                                stringResource(R.string.set_completed_format, completedSets + 1)
+                            } else {
+                                stringResource(R.string.all_sets_completed_label)
+                            }
+                        )
+                    }
+                    if (completedSets > 0) {
+                        IconButton(onClick = { completedSets = 0 }) {
+                            Icon(
+                                imageVector = Icons.Default.Refresh,
+                                contentDescription = stringResource(R.string.reset_set_tracking)
+                            )
+                        }
                     }
                 }
             }
 
             item {
-                SectionHeader(title = "Dinlenme Sayacı")
-            }
-
-            item {
-                TimerSection(
-                    timerViewModel = timerViewModel,
-                    defaultDurationSeconds = restBetweenSets.toIntOrNull()?.coerceAtLeast(1) ?: 25
+                TimerStatusRow(
+                    timerState = timerState,
+                    onClick = { showTimerDialog = true }
                 )
             }
 
@@ -285,8 +315,6 @@ fun AddWorkoutScreen(
                 Button(
                     onClick = {
                         val sets = setValues.map { it.toIntOrNull() ?: 0 }
-                        val setRest = restBetweenSets.toIntOrNull()
-                        val exerciseRest = restBetweenExercises.toIntOrNull()
 
                         when {
                             exerciseName.isBlank() -> {
@@ -299,14 +327,8 @@ fun AddWorkoutScreen(
                                     snackbarHostState.showSnackbar("Tüm set tekrarlarını girin")
                                 }
                             }
-                            setRest == null || setRest <= 0 ||
-                                exerciseRest == null || exerciseRest <= 0 -> {
-                                scope.launch {
-                                    snackbarHostState.showSnackbar("Dinlenme süreleri 0'dan büyük olmalı")
-                                }
-                            }
                             else -> {
-                                val createdAt = selectedDate
+                                val createdAt = LocalDate.now()
                                     .atTime(LocalTime.now())
                                     .atZone(ZoneId.systemDefault())
                                     .toInstant()
@@ -315,8 +337,8 @@ fun AddWorkoutScreen(
                                 workoutViewModel.saveWorkout(
                                     exerciseName = exerciseName,
                                     sets = sets,
-                                    restBetweenSetsSeconds = setRest,
-                                    restBetweenExercisesSeconds = exerciseRest,
+                                    restBetweenSetsSeconds = settings.restBetweenSetsSeconds,
+                                    restBetweenExercisesSeconds = settings.restBetweenExercisesSeconds,
                                     createdAt = createdAt
                                 ) {
                                     exerciseName = ""
@@ -325,7 +347,7 @@ fun AddWorkoutScreen(
                                     repeat(6) { setValues.add(settings.defaultReps.toString()) }
                                     scope.launch {
                                         snackbarHostState.showSnackbar(
-                                            "Antrenman seçilen güne kaydedildi"
+                                            "Antrenman kaydedildi"
                                         )
                                     }
                                 }
@@ -387,36 +409,43 @@ private fun ActiveSetBanner(activeSet: Int, totalSets: Int, completed: Int) {
 }
 
 @Composable
-private fun TotalRepsCard(totalReps: Int) {
+private fun TimerStatusRow(timerState: com.example.calistenic.TimerUiState, onClick: () -> Unit) {
+    val minutes = timerState.remainingSeconds / 60
+    val seconds = timerState.remainingSeconds % 60
+    val statusText = when {
+        timerState.isFinished -> "Dinlenme bitti"
+        timerState.isRunning -> "Çalışıyor · %02d:%02d".format(minutes, seconds)
+        timerState.isPaused -> "Duraklatıldı · %02d:%02d".format(minutes, seconds)
+        else -> "Sayacı başlatmak için dokun"
+    }
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
         shape = CardShape,
-        elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp)
+        colors = CardDefaults.elevatedCardColors(
+            containerColor = if (timerState.isRunning || timerState.isPaused) {
+                MaterialTheme.colorScheme.primaryContainer
+            } else {
+                MaterialTheme.colorScheme.surfaceVariant
+            }
+        )
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(20.dp),
+                .padding(16.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
         ) {
-            Column {
-                Text(
-                    text = stringResource(R.string.total_reps),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Text(
-                    text = "Bu antrenman için",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
             Text(
-                text = totalReps.toString(),
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary
+                text = statusText,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.SemiBold
+            )
+            Icon(
+                imageVector = Icons.Default.PlayArrow,
+                contentDescription = null
             )
         }
     }
@@ -428,8 +457,10 @@ private fun SetCard(
     value: String,
     isCompleted: Boolean,
     isActive: Boolean,
-    onValueChange: (String) -> Unit
+    onValueChange: (String) -> Unit,
+    modifier: Modifier = Modifier
 ) {
+    var isManualEntry by remember { mutableStateOf(false) }
     val containerColor = when {
         isCompleted -> MaterialTheme.colorScheme.primaryContainer
         isActive -> MaterialTheme.colorScheme.surfaceVariant
@@ -440,7 +471,7 @@ private fun SetCard(
         else -> MaterialTheme.colorScheme.onSurface
     }
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier,
         shape = CardShape,
         colors = CardDefaults.elevatedCardColors(
             containerColor = containerColor,
@@ -450,16 +481,15 @@ private fun SetCard(
             defaultElevation = if (isActive) 4.dp else 1.dp
         )
     ) {
-        Row(
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
-            verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                .padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp)
         ) {
-            // Set numarası badge
+            // Set numarası badge (Tamamlandıysa ✓)
             Card(
-                shape = RoundedCornerShape(12.dp),
+                shape = RoundedCornerShape(10.dp),
                 colors = CardDefaults.elevatedCardColors(
                     containerColor = if (isCompleted) {
                         MaterialTheme.colorScheme.primary
@@ -475,28 +505,75 @@ private fun SetCard(
             ) {
                 Text(
                     text = if (isCompleted) "✓" else setNumber.toString(),
-                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                    style = MaterialTheme.typography.labelLarge,
                     fontWeight = FontWeight.Bold
                 )
             }
-            Column(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(4.dp)
-            ) {
-                Text(
-                    text = stringResource(R.string.set_label_format, setNumber) +
-                        if (isCompleted) " " + stringResource(R.string.done_check) else "",
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.SemiBold
-                )
+            if (isManualEntry) {
                 NumberField(
                     value = value,
                     onValueChange = onValueChange,
                     label = stringResource(R.string.reps_label),
                     modifier = Modifier.fillMaxWidth()
                 )
+                TextButton(
+                    onClick = { isManualEntry = false },
+                    contentPadding = PaddingValues(horizontal = 0.dp, vertical = 0.dp)
+                ) {
+                    Text(
+                        text = stringResource(R.string.use_stepper),
+                        style = MaterialTheme.typography.labelSmall
+                    )
+                }
+            } else {
+                RepsStepper(value = value, onValueChange = onValueChange)
+                TextButton(
+                    onClick = { isManualEntry = true },
+                    contentPadding = PaddingValues(horizontal = 0.dp, vertical = 0.dp)
+                ) {
+                    Text(
+                        text = stringResource(R.string.manual_entry),
+                        style = MaterialTheme.typography.labelSmall
+                    )
+                }
             }
+        }
+    }
+}
+
+@Composable
+private fun RepsStepper(
+    value: String,
+    onValueChange: (String) -> Unit
+) {
+    val current = value.toIntOrNull() ?: 0
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
+    ) {
+        OutlinedButton(
+            onClick = { onValueChange((current - 1).coerceAtLeast(0).toString()) },
+            enabled = current > 0,
+            contentPadding = PaddingValues(0.dp),
+            modifier = Modifier.size(36.dp)
+        ) {
+            Text("−", style = MaterialTheme.typography.titleMedium)
+        }
+        Text(
+            text = current.toString(),
+            modifier = Modifier.weight(1f),
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.Center
+        )
+        OutlinedButton(
+            onClick = { onValueChange((current + 1).toString()) },
+            contentPadding = PaddingValues(0.dp),
+            modifier = Modifier.size(36.dp)
+        ) {
+            Text("+", style = MaterialTheme.typography.titleMedium)
         }
     }
 }
