@@ -1,0 +1,27 @@
+<resources>
+    <string name="app_name">Calistenic</string>
+    <string name="tab_add">Ekle</string>
+    <string name="tab_history">Geçmiş</string>
+    <string name="tab_settings">Ayarlar</string>
+    <string name="new_workout">Yeni Antrenman</string>
+    <string name="exercise_name_label">Hareket adı</string>
+    <string name="exercise_name_placeholder">Örnek: Pull-up</string>
+    <string name="active_set_format">Aktif Set: %1$d/%2$d</string>
+    <string name="all_sets_completed">Tüm setler tamamlandı</string>
+    <string name="total_reps">Toplam Tekrar</string>
+    <string name="rest_between_sets_label">Setler arası dinlenme (saniye)</string>
+    <string name="rest_between_exercises_label">Hareketler arası dinlenme (saniye)</string>
+    <string name="set_completed_format">Set %1$d Tamamlandı</string>
+    <string name="all_sets_completed_label">Tüm Setler Tamamlandı</string>
+    <string name="reset_set_tracking">Set Takibini Sıfırla</string>
+    <string name="save_workout">Antrenmanı Kaydet</string>
+    <string name="error_exercise_name_empty">Hareket adı boş bırakılamaz</string>
+    <string name="error_set_reps_empty">Tüm set tekrarlarını girin</string>
+    <string name="error_rest_invalid">Dinlenme süreleri 0\'dan büyük olmalı</string>
+    <string name="workout_saved_success">Antrenman seçilen güne kaydedildi</string>
+    <string name="add_set">Set Ekle</string>
+    <string name="remove_set">Set Çıkar</string>
+    <string name="done_check">✓</string>
+    <string name="set_label_format">Set %1$d</string>
+    <string name="reps_label">Yapılan tekrar</string>
+</resources>

@@ -1,0 +1,15 @@
+*.iml
+.DS_Store
+.gradle
+/local.properties
+/.idea
+/build
+/captures
+.externalNativeBuild
+.cxx
+app/build
+
+# Sürüm imzalama gizli dosyaları — ASLA commit edilmemeli
+keystore.properties
+*.jks
+*.keystore
